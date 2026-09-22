@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-cream: #F5EDE4;
+  --color-cream-light: #FBF7F3;
+  --color-cream-dark: #E8DDD2;
+  --color-brown-dark: #3D3228;
+  --color-brown-medium: #6B5B4E;
+  --color-brown-light: #8B7B6E;
+  --color-tan-gold: #B8956A;
+  --color-tan-light: #D4B896;
+  --color-tan-hover: #A6845C;
+  --color-rose-soft: #C9A89A;
+  --color-rose-light: #DFC5BA;
+
+  /* Fonts */
+  --font-heading: 'Playfair Display', serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Animations */
+  --animate-fade-in: fade-in 0.6s ease-out forwards;
+  --animate-slide-up: slide-up 0.5s ease-out forwards;
+  --animate-slide-down: slide-down 0.3s ease-out forwards;
+  --animate-scale-in: scale-in 0.3s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-cream-light);
+  color: var(--color-brown-dark);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  line-height: 1.2;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--color-cream); }
+::-webkit-scrollbar-thumb { background: var(--color-tan-light); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-tan-gold); }
+
+/* Selection */
+::selection {
+  background-color: var(--color-tan-light);
+  color: var(--color-brown-dark);
+}
+
+/* Reusable wrapper */
+.wrapper {
+  width: 100%;
+  max-width: 80rem; /* 1280px */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .wrapper {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .wrapper {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Hide scrollbar utility */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+button {
+  cursor: pointer;
+}
