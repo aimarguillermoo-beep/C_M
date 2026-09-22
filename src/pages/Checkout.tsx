@@ -27,7 +27,7 @@ export default function Checkout() {
 
   const formRef = React.useRef<HTMLFormElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formRef.current) return;
     
@@ -48,7 +48,7 @@ export default function Checkout() {
       notes: formData.get('notes') as string
     };
     
-    const newOrderId = addOrder({
+    const newOrderId = await addOrder({
       items,
       customerInfo,
       total: finalTotal,
@@ -187,7 +187,7 @@ export default function Checkout() {
                 {items.map(item => (
                   <div key={item.id} className="flex gap-4 items-center">
                     <div className="relative">
-                      <img src={item.image} alt={item.name} className="w-16 h-16 object-contain bg-white rounded-lg p-1 border border-tan-light/30" />
+                      <img src={item.images?.[0] || item.image} alt={item.name} className="w-16 h-16 object-contain bg-white rounded-lg p-1 border border-tan-light/30" />
                       <span className="absolute -top-2 -right-2 bg-brown-dark text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold">
                         {item.quantity}
                       </span>

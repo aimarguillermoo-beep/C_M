@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Image as ImageIcon, UploadCloud } from 'lucide-react';
 import { useProducts } from '../../context/ProductsContext';
 import { categories } from '../../data/products';
 import type { ProductColor } from '../../types';
+import { supabase } from '../../lib/supabase';
 
 const COLOR_PALETTE = [
   { name: 'Negro', hex: '#1a1a1a' },
@@ -40,6 +41,7 @@ export default function AdminProductForm() {
   const navigate = useNavigate();
   const { products, addProduct, updateProduct } = useProducts();
   const isEditing = !!id;
+  const [uploading, setUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -143,6 +145,39 @@ export default function AdminProductForm() {
   };
   const selectPaletteColor = (colorIndex: number, palette: { name: string; hex: string }) => {
     updateColor(colorIndex, { name: palette.name, hex: palette.hex });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isColorImage: boolean, index1: number, index2?: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `product-images/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('products')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('products').getPublicUrl(filePath);
+      const publicUrl = data.publicUrl;
+
+      if (isColorImage && index2 !== undefined) {
+        updateColorImage(index1, index2, publicUrl);
+      } else {
+        updateImage(index1, publicUrl);
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Error al subir la imagen');
+    } finally {
+      setUploading(false);
+      e.target.value = ''; // reset input
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -330,15 +365,21 @@ export default function AdminProductForm() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Imágenes para "{color.name || 'este color'}"</label>
                       <div className="grid grid-cols-3 gap-3">
                         {color.images.map((img, ii) => (
-                          <div key={ii}>
-                            <input
-                              type="url"
-                              value={img}
-                              onChange={e => updateColorImage(ci, ii, e.target.value)}
-                              placeholder="https://..."
-                              className="w-full p-1.5 border rounded-md text-xs focus:ring-2 focus:ring-tan-gold outline-none mb-1"
-                            />
-                            <div className="aspect-square rounded-lg border border-dashed border-gray-300 bg-white overflow-hidden flex items-center justify-center">
+                          <div key={ii} className="flex flex-col gap-1">
+                            <div className="flex gap-1">
+                              <input
+                                type="url"
+                                value={img}
+                                onChange={e => updateColorImage(ci, ii, e.target.value)}
+                                placeholder="URL..."
+                                className="w-full p-1 border rounded-md text-xs focus:ring-2 focus:ring-tan-gold outline-none"
+                              />
+                              <label className={`flex items-center justify-center px-2 py-1 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 ${uploading ? 'opacity-50 cursor-wait' : ''}`} title="Subir imagen">
+                                <UploadCloud className="w-3 h-3 text-gray-600" />
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, true, ci, ii)} disabled={uploading} />
+                              </label>
+                            </div>
+                            <div className="aspect-square rounded-lg border border-dashed border-gray-300 bg-white overflow-hidden flex items-center justify-center mt-1">
                               {img ? (
                                 <img src={img} alt="" className="w-full h-full object-cover" />
                               ) : (
@@ -361,7 +402,7 @@ export default function AdminProductForm() {
           {/* Product Images */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4">
             <h2 className="text-lg font-bold text-gray-900 border-b pb-2">Imágenes del Producto</h2>
-            <p className="text-xs text-gray-500">Hasta 3 imágenes. La primera es la principal.</p>
+            <p className="text-xs text-gray-500">Hasta 3 imágenes. Pegá la URL o subí un archivo.</p>
 
             <div className="space-y-4">
               {formData.images.map((img, i) => (
@@ -369,14 +410,20 @@ export default function AdminProductForm() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {i === 0 ? 'Principal *' : `Imagen ${i + 1} (opcional)`}
                   </label>
-                  <input
-                    type="url"
-                    value={img}
-                    onChange={(e) => updateImage(i, e.target.value)}
-                    placeholder="https://..."
-                    required={i === 0}
-                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-tan-gold outline-none text-sm mb-2"
-                  />
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="url"
+                      value={img}
+                      onChange={(e) => updateImage(i, e.target.value)}
+                      placeholder="https://..."
+                      required={i === 0}
+                      className="flex-1 p-2 border rounded-md focus:ring-2 focus:ring-tan-gold outline-none text-sm"
+                    />
+                    <label className={`flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors ${uploading ? 'opacity-50 cursor-wait' : ''}`}>
+                      <UploadCloud className="w-4 h-4 text-gray-600" />
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, false, i)} disabled={uploading} />
+                    </label>
+                  </div>
                   <div className="aspect-video w-full rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
                     {img ? (
                       <img src={img} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />

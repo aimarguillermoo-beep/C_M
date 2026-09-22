@@ -1,33 +1,47 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface AdminContextType {
   isAdmin: boolean;
-  login: (password: string) => boolean;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
-const ADMIN_SESSION_KEY = 'cm-hogar-admin';
-
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [isAdmin, setIsAdmin] = useState(() => {
-    return sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
-  });
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const login = (password: string): boolean => {
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
-    if (password === adminPassword) {
-      setIsAdmin(true);
-      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
-      return true;
+  useEffect(() => {
+    // Verificar sesión activa inicial
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAdmin(!!session);
+    });
+
+    // Escuchar cambios de autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAdmin(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      return !!data.user;
+    } catch (error) {
+      console.error('Error en login:', error);
+      return false;
     }
-    return false;
   };
 
-  const logout = () => {
-    setIsAdmin(false);
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
   return (

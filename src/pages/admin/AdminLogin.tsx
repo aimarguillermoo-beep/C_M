@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
 import { Shield, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function AdminLogin() {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login, isAdmin } = useAdmin();
   const navigate = useNavigate();
 
@@ -16,15 +18,18 @@ export default function AdminLogin() {
     }
   }, [isAdmin, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     
-    if (login(password)) {
+    const success = await login(email, password);
+    if (success) {
       navigate('/admin');
     } else {
-      setError('Contraseña incorrecta');
+      setError('Credenciales incorrectas');
     }
+    setLoading(false);
   };
 
   return (
@@ -41,7 +46,21 @@ export default function AdminLogin() {
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Contraseña de acceso
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-tan-gold focus:border-transparent outline-none transition-all border-gray-200"
+              placeholder="tu@email.com"
+              required
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Contraseña
             </label>
             <div className="relative">
               <input
@@ -52,7 +71,7 @@ export default function AdminLogin() {
                   error ? 'border-red-300 bg-red-50' : 'border-gray-200'
                 }`}
                 placeholder="Ingresa la contraseña"
-                autoFocus
+                required
               />
               <button
                 type="button"
@@ -69,9 +88,10 @@ export default function AdminLogin() {
 
           <button
             type="submit"
-            className="w-full bg-tan-gold text-white font-medium py-3 rounded-lg hover:bg-yellow-600 transition-colors shadow-sm"
+            disabled={loading}
+            className="w-full bg-tan-gold text-white font-medium py-3 rounded-lg hover:bg-yellow-600 transition-colors shadow-sm disabled:opacity-70"
           >
-            Ingresar al Panel
+            {loading ? 'Ingresando...' : 'Ingresar al Panel'}
           </button>
         </form>
       </div>

@@ -1,39 +1,45 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
 import type { Order } from '../types';
 
 interface OrdersContextType {
   orders: Order[];
-  addOrder: (order: Omit<Order, 'id' | 'createdAt' | 'status'>) => string;
-  updateOrderStatus: (id: string, status: Order['status']) => void;
-  deleteOrder: (id: string) => void;
-  clearOrders: () => void;
+  addOrder: (order: Omit<Order, 'id' | 'createdAt' | 'status'>) => Promise<string>;
+  updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
+  deleteOrder: (id: string) => Promise<void>;
+  clearOrders: () => Promise<void>;
 }
 
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 
-const ORDERS_STORAGE_KEY = 'cm-hogar-orders';
-
-function loadOrdersFromStorage(): Order[] {
-  try {
-    const stored = localStorage.getItem(ORDERS_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveOrdersToStorage(orders: Order[]): void {
-  localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
-}
-
 export function OrdersProvider({ children }: { children: ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>(loadOrdersFromStorage);
+  const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    saveOrdersToStorage(orders);
-  }, [orders]);
+    fetchOrders();
+  }, []);
 
-  const addOrder = (orderData: Omit<Order, 'id' | 'createdAt' | 'status'>): string => {
+  const fetchOrders = async () => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (data && !error) {
+      const formattedOrders: Order[] = data.map(o => ({
+        id: o.id,
+        customerInfo: o.customer_info,
+        items: o.items,
+        status: o.status,
+        total: o.total,
+        shippingCost: o.shipping_cost,
+        createdAt: o.created_at
+      }));
+      setOrders(formattedOrders);
+    }
+  };
+
+  const addOrder = async (orderData: Omit<Order, 'id' | 'createdAt' | 'status'>): Promise<string> => {
     const id = `CM-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`;
     const newOrder: Order = {
       ...orderData,
@@ -41,20 +47,38 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       status: 'pending',
       createdAt: new Date().toISOString(),
     };
+    
+    // Optimistic UI
     setOrders(prev => [newOrder, ...prev]);
+
+    await supabase.from('orders').insert({
+      id: newOrder.id,
+      customer_info: newOrder.customerInfo,
+      items: newOrder.items,
+      status: newOrder.status,
+      total: newOrder.total,
+      shipping_cost: newOrder.shippingCost,
+      created_at: newOrder.createdAt
+    });
+
     return id;
   };
 
-  const updateOrderStatus = (id: string, status: Order['status']) => {
+  const updateOrderStatus = async (id: string, status: Order['status']) => {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+    await supabase.from('orders').update({ status }).eq('id', id);
   };
 
-  const deleteOrder = (id: string) => {
+  const deleteOrder = async (id: string) => {
     setOrders(prev => prev.filter(o => o.id !== id));
+    await supabase.from('orders').delete().eq('id', id);
   };
 
-  const clearOrders = () => {
+  const clearOrders = async () => {
     setOrders([]);
+    // Warning: En un entorno real borraríamos solo de la UI o pediríamos confirmación
+    // Esto borra todo de la tabla pedidos.
+    await supabase.from('orders').delete().neq('id', '0'); // Hack to delete all
   };
 
   return (
